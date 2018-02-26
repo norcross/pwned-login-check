@@ -145,7 +145,7 @@ final class PwnedLoginCheck_Core {
 			define( 'PWNED_LOGIN_API_URL', 'https://api.pwnedpasswords.com/pwnedpassword' );
 		}
 
-		// Set what our user meta meta key will be.
+		// Set what our user meta flag key will be.
 		if ( ! defined( 'PWNED_LOGIN_USERKEY' ) ) {
 			define( 'PWNED_LOGIN_USERKEY', '_pwned_login_flag' );
 		}
@@ -165,7 +165,7 @@ final class PwnedLoginCheck_Core {
 
 		// Include the admin functionality.
 		if ( is_admin() ) {
-			require_once PWNED_LOGIN_INCLS . '/class-notices.php';
+			require_once PWNED_LOGIN_INCLS . '/class-admin.php';
 		}
 
 		// Include the login functionality.
@@ -190,7 +190,7 @@ final class PwnedLoginCheck_Core {
 		$lang_dir = dirname( plugin_basename( PWNED_LOGIN_FILE ) ) . '/languages/';
 
 		/**
-		 * Filters the languages directory path to use for LiquidWebKB.
+		 * Filters the languages directory path to use for PwnedLoginCheck.
 		 *
 		 * @param string $lang_dir The languages directory path.
 		 */
@@ -202,7 +202,7 @@ final class PwnedLoginCheck_Core {
 		$get_locale = $wp_version >= 4.7 ? get_user_locale() : get_locale();
 
 		/**
-		 * Defines the plugin language locale used in LiquidWebKB.
+		 * Defines the plugin language locale used in PwnedLoginCheck.
 		 *
 		 * @var $get_locale The locale to use. Uses get_user_locale()` in WordPress 4.7 or greater,
 		 *                  otherwise uses `get_locale()`.
@@ -244,7 +244,7 @@ final class PwnedLoginCheck_Core {
 		// Do our before check.
 		do_action( 'pwned_login_check_before', $user_id );
 
-		// Set the API url.
+		// Set the API url with our hashed password.
 		$domain = PWNED_LOGIN_API_URL . '/' . sha1( $password );
 
 		// Run the actual pwned check.
@@ -255,6 +255,9 @@ final class PwnedLoginCheck_Core {
 
 			// Delete the key.
 			$this->delete_single_user_meta( $user_id );
+
+			// Run the action for not getting an API response.
+			do_action( 'pwned_login_check_after', 'bad_api', $user_id, 0 );
 
 			// And return.
 			return;
@@ -283,10 +286,10 @@ final class PwnedLoginCheck_Core {
 			$count  = wp_remote_retrieve_body( $pwned );
 
 			// Update the meta.
-			$this->update_single_user_meta( $user_id, $count );
+			$this->update_single_user_meta( $user_id, absint( $count ) );
 
 			// Run the action for being on the list.
-			do_action( 'pwned_login_check_after', 'listed', $user_id, $count );
+			do_action( 'pwned_login_check_after', 'listed', $user_id, absint( $count ) );
 
 			// And return.
 			return;
@@ -326,14 +329,14 @@ final class PwnedLoginCheck_Core {
 		$count  = get_user_meta( $user_id, PWNED_LOGIN_USERKEY, true );
 
 		// Return the result.
-		return ! empty( $count ) ? $count : false;
+		return ! empty( absint( $count ) ) ? absint( $count ) : false;
 	}
 
 	/**
 	 * Add the user meta related to the login check.
 	 *
 	 * @param integer $user_id  The user ID being checked.
-	 * @param integer $count    How many instances .
+	 * @param integer $count    How many instances of the password was found.
 	 *
 	 * @return void
 	 */
@@ -345,7 +348,7 @@ final class PwnedLoginCheck_Core {
 		}
 
 		// Update the user meta.
-		update_user_meta( $user_id, PWNED_LOGIN_USERKEY, $count );
+		update_user_meta( $user_id, PWNED_LOGIN_USERKEY, absint( $count ) );
 	}
 
 	/**

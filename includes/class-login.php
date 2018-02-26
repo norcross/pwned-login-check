@@ -1,6 +1,6 @@
 <?php
 /**
- * Our authenticate functions.
+ * Our one login authentication function.
  *
  * @package PwnedLoginCheck
  */
